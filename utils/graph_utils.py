@@ -199,6 +199,8 @@ def build_knn_graph_from_features(features, labels, k=8, metric='cosine',
                 sim = 1 - dists[i, r]  # Convert distance to similarity
                 edge_list.append((i, j, sim))
     
+    initial_edge_cnt = len(edge_list)
+    label_based_add_cnt = label_based_add_success_cnt = 0
     # Add label-based edges
     if add_label_edges:
         print("Adding label-based edges...")
@@ -213,7 +215,16 @@ def build_knn_graph_from_features(features, labels, k=8, metric='cosine',
                     for idx in top_k:
                         j = valid_neighbors[idx]
                         if i < j:
+                            label_based_add_cnt += 1
+                            for a0, b0, _ in edge_list:
+                              if a0 == i and b0 == j:
+                                break
+                            else:
+                              label_based_add_success_cnt += 1
                             edge_list.append((i, j, sims[idx]))
+
+    print(f'label_based_add_cnt: {label_based_add_cnt}')
+    print(f'label_based_add_success_cnt: {label_based_add_success_cnt}')
     
     # Rewire edges for better homophily
     if rewire_edges:
@@ -236,10 +247,13 @@ def build_knn_graph_from_features(features, labels, k=8, metric='cosine',
                         rewired_count += 1
                 edge_list = [(u, v, w) for u, v, w in edge_list if not (u == i and v in to_remove) or (v == i and u in to_remove)]
         
-        print(f"Rewired {rewired_count} edges")
+        print(f"Rewired {rewired_count} edges")  
     
     # Remove duplicates
     edge_list = list(set(edge_list))
+
+    print(f'initial_edge_cnt: {initial_edge_cnt}')
+    print(f'edge_cnt: {len(edge_list)}')
     
     # Create graph
     G = nx.Graph()
